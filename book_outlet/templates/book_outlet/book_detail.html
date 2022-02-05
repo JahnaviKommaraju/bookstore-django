@@ -1,0 +1,21 @@
+{% extends 'book_outlet/base.html' %}
+{% comment %} single detailed page for every book {% endcomment %}
+
+{% block title %}
+        {{title}}
+{% endblock  %}
+
+{% block content %}
+    <h1>{{title}}</h1>
+    <h2>{{author}}</h2>
+    <p>The book has a rating of {{rating}}
+        {% if is_bestseller %}
+        and is a is bestseller
+        {% else %}
+        but isn't a bestseller
+        {% endif %}
+    </p>
+
+{% endblock content %}
+
+

@@ -1,0 +1,173 @@
+########Inserting Data
+
+python manage.py shell //for interactive shell
+
+>>> from book_outlet.models import Book
+>>> harry_potter=Book()
+>>> harry_potter=Book(title="harry Potter-1", rating=5)
+>>> harry_potter.save()
+>>> lord_of_rings=Book(title="Lord of rings", rating=4)
+>>> lord_of_rings.save()
+
+exit()
+
+>>> from book_outlet.models import Book
+>>> Book.objects.all()
+<QuerySet [<Book: Book object (1)>, <Book: Book object (2)>]>
+exit()
+
+
+##########Getting all Entries
+>>> from book_outlet.models import Book
+>>> Book.objects.all()
+<QuerySet [<Book: harry Potter-1(5)>, <Book: Lord of rings(4)>]>
+exit()
+
+
+#########Updating Models & Migrations
+python .\manage.py makemigrations
+python .\manage.py migrate
+
+python manage.py shell //for interactive shell
+>>> from book_outlet.models import Book
+>>> Book.objects.all()[1]
+<Book: Lord of rings(4)>
+>>> Book.objects.all()[1].author
+>>> Book.objects.all()[1].is_bestselling
+False
+>>> Book.objects.all()[1].rating
+4
+
+########UPDATING DATA IN MODELS
+>>> from book_outlet.models import Book
+>>> Book.objects.all()[1] // to check values of objects
+<Book: Lord of rings(4)>
+>>> Book.objects.all()[1].author
+>>> Book.objects.all()[1].is_bestselling
+False
+>>> Book.objects.all()[1].rating
+4
+	#updating values of 1st object
+>>> harry_potter=Book.objects.all()[0]
+>>> harry_potter.title
+'harry Potter-1'
+>>> lord_of_rings=Book.objects.all()[1]
+>>> lord_of_rings.title                
+'Lord of rings'
+	#updating values of 1st object
+>>> harry_potter.author="J.K.Rowling"
+>>> harry_potter.is_bestselling=True
+>>> harry_potter.save()  //creates a  new table if doesn't exist or else it just updates the values of table           
+	#checking values of 1st object
+>>> Book.objects.all()[0].author
+'J.K.Rowling'
+	#updating values of 2nd object
+>>> lord_of_rings.author="J.R.R tolkie"
+>>> lord_of_rings.is_bestselling=True  
+>>> lord_of_rings.save()      
+	#checking values of 2nd object
+>>> Book.objects.all()[1].author  
+'J.R.R tolkie'
+>>> Book.objects.all()[1].is_bestselling
+True  
+	#delete data
+>>> harry_potter.delete()               
+(1, {'book_outlet.Book': 1})
+	#checking values of model
+>>> Book.objects.all()                  
+<QuerySet [<Book: Lord of rings(4)>]>
+
+	#####CREATING OBJECTS AT A TIME
+>>> Book.objects.create(title="Harry potter 1",rating=5,author="J.K.Rowling", is_bestselling=True)
+<Book: Harry potter 1(5)>
+>>> Book.objects.all()
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 1(5)>]>
+
+>>> Book.objects.create(title="Harry potter 2",rating=4,author="J.K.Rowling", is_bestselling=False)
+<Book: Harry potter 2(4)>
+>>> Book.objects.all()
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 1(5)>, <Book: Harry potter 2(4)>]>
+
+#########To query single values -> get()
+>>> Book.objects.get(id=3)
+<Book: Harry potter 1(5)>
+>>> Book.objects.get(id=2)
+<Book: Lord of rings(4)>
+>>> Book.objects.get(id=1)	#bcoz we already deleted it adn once deleted its gone
+book_outlet.models.Book.DoesNotExist: Book matching query does not exist.
+>>> Book.objects.get(title="Harry potter 2")
+<Book: Harry potter 2(4)>
+>>> Book.objects.get(rating=5)
+<Book: Harry potter 1(5)>
+
+#########To query single values -> filter()
+>>> Book.objects.filter(is_bestselling=True)
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 1(5)>]>
+>>> Book.objects.filter(is_bestselling=False, rating=4) 
+<QuerySet [<Book: Harry potter 2(4)>]>
+
+>>> Book.objects.filter(rating<3)      ##we can't directly use condition on filter                 
+	Traceback (most recent call last):
+  	File "<console>", line 1, in <module>
+	NameError: name 'rating' is not define
+
+>>> Book.objects.filter(rating__lte=5) #lte->less than equal to
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 1(5)>, <Book: Harry potter 2(4)>]>
+>>> Book.objects.filter(rating__lt=5)  #lt->less than
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 2(4)>]>
+
+	##__contains -> case insenstitive(u can give a part of title to get result)
+>>> Book.objects.filter(rating__lte=4, title__contains="harry")
+<QuerySet [<Book: Harry potter 2(4)>]>
+
+	##Q->Query
+>>> from django.db.models import Q ## for applying multiple conditions
+>>> Book.objects.filter(Q(rating__lte=4)|Q(title__contains="harry"))    #|-> denotes "or" 
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 1(5)>, <Book: Harry potter 2(4)>]>
+
+>>> Book.objects.filter(Q(rating__lte=4),Q(title__contains="harry")) #,-> denotes"and"
+<QuerySet [<Book: Harry potter 2(4)>]>
+	
+	##in multiple conditions if Q is not used for attribute then we have to put that condition last
+>>> Book.objects.filter(Q(rating__lte=4),title__contains="harry")    
+<QuerySet [<Book: Harry potter 2(4)>]>
+
+>>> Book.objects.filter(Q(rating__lte=4)|Q(is_bestselling=False),title__contains="Lord")  #using and, or
+<QuerySet [<Book: Lord of rings(4)>]>
+
+#########Performance (Fetching from database mutliple times Vs Cached)
+>>> bestsellers=Book.objects.filter(is_bestselling=True)
+>>> amazng_bestsellers=bestsellers.filter(rating__gt=4)
+
+>>> print(bestsellers) #cached
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 1(5)>]>
+
+>>> print(amazng_bestsellers)  #cached as its taken from result set of bestsellers
+<QuerySet [<Book: Harry potter 1(5)>]>
+
+>>> print(Book.objects.filter(rating__gte=4)) #Fetching from database
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 1(5)>, <Book: Harry potter 2(4)>]>
+
+>>> print(Book.objects.filter(rating__gte=4)) Fetching from database mutliple times as its given at runtime
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 1(5)>, <Book: Harry potter 2(4)>]>
+
+>>> good_books=Book.objects.filter(rating__gte=4)
+
+>>> print(good_books) #cached as it taken from stored value
+<QuerySet [<Book: Lord of rings(4)>, <Book: Harry potter 1(5)>, <Book: Harry potter 2(4)>]>
+
+####### using save and slug######
+	#slug is a part of url that we are going to use
+>>> from book_outlet.models import Book
+
+>>> Book.objects.get(title="Lord of rings").save()
+>>> Book.objects.get(title="Lord of rings").slug  
+'lord-of-rings'
+
+>>> Book.objects.get(title="Harry potter 1").save()
+>>> Book.objects.get(title="Harry potter 1").slug  
+'harry-potter-1'
+
+>>> Book.objects.get(title="Harry potter 2").save()
+>>> Book.objects.get(title="Harry potter 2").slug  
+'harry-potter-2'

@@ -1,0 +1,18 @@
+create superuser to log into admin panel
+        python .\manage.py createsuperuser
+
+Now register models in 
+        book_outlet > admin.py
+    
+        In admin.py >>
+                from .models import Book
+
+                # Register your models here.
+                admin.site.register(Book)
+In admin panel, 
+        on views.py  blank=True -> to make sure that slug field is not mandatory and can also be blank
+        on views.py editable=False ->in admin field that field shoul't  be editable
+
+In admin.py,
+        class BookAdmin(admin.ModelAdmin): #this class allows us to set various options/properties that refelct in admin page
+                pass

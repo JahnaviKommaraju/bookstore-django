@@ -1,0 +1,147 @@
+Data relationships
+    Types:
+        One_to_Many
+        One_to_One
+        Many-to-Many
+
+######-----One_to_Many----######
+Managing relations with django models:
+    In models.py,
+            create an Auhtor class
+            and add foreign key for author in Book class
+
+    While migrating we had an null value issue:
+     so in interactive shell, we'll delete all values of Book so we'll not have any old records
+     >>> from book_outlet.models import Book
+     >>> Book.objects.all().delete()
+     (6, {'book_outlet.Book': 6})
+
+     python .\manage.py makemigrations
+     python .\manage.py migrate
+
+Inserting new values into models and querying into models:
+    >>> from book_outlet.models import Book, Author
+    >>> jkrowling=Author(first_name="J.K.",last_name="Rowling")
+    >>> jkrowling.save()                                       
+    >>> Author.objects.all()
+    <QuerySet [<Author: Author object (1)>]>
+    >>> Author.objects.all()[0].first_name
+    'J.K.'
+    >>> hp1=Book(title="Harry Potter 1",rating=5,author=jkrowling,is_bestselling=True,slug="harry-potter-1")
+    >>> hp1.save()
+    >>> Book.objects.all()
+    <QuerySet [<Book: Harry Potter 1(5)>]>
+    
+    >>> harrypotter= Book.objects.get(title="Harry Potter 1") 
+    >>> harrypotter
+    <Book: Harry Potter 1(5)>
+    >>> harrypotter.author
+    <Author: Author object (1)>
+    >>> harrypotter.author.first_name
+    'J.K.'
+    >>> harrypotter.author.last_name  
+    'Rowling'
+
+    Querying across relations:
+            Using filters and  __to acess from related models
+        >>> books_by_rowling=Book.objects.filter(author__last_name="Rowling")
+        >>> books_by_rowling
+        <QuerySet [<Book: Harry Potter 1(5)>]>
+        >>> books_by_rowling=Book.objects.filter(author__last_name__contains="ling")    
+        >>> books_by_rowling
+        <QuerySet [<Book: Harry Potter 1(5)>]>
+
+    We can also access inverse of relations
+        >>> jkr=Author.objects.get(first_name="J.K.")
+        >>> jkr                                      
+        <Author: Author object (1)>
+            here, book_set -> ojects just for relations takes class name and converts into lower case and add _ an then add set 
+            
+            >>> jkr.book_set #inverse of relation
+            <django.db.models.fields.related_descriptors.create_reverse_many_to_one_manager.<locals>.RelatedManager object at 0x0000027A05BE9960> 
+            
+            >>> jkr.book_set.all()
+            QuerySet [<Book: Harry Potter 1(5)>]>
+        
+            Querying using related_name:
+                >>> from book_outlet.models import Book,Author
+                >>> jkr=Author.objects.get(first_name="J.K.")
+                >>> jkr.books.all()
+                <QuerySet [<Book: Harry Potter 1(5)>]>
+                >>> jkr.books.get(title="Harry Potter 1")
+                <Book: Harry Potter 1(5)>
+                >>> jkr.books.filter(rating__gt=3)
+                <QuerySet [<Book: Harry Potter 1(5)>]>
+
+
+######-----One_to_One----######
+In intreactive shell:
+            ###Adding address to authors
+    >>> from book_outlet.models import Author,Address,Book
+    >>> Author.objects.all()
+    <QuerySet [<Author: J.K. Rowling>, <Author: Jahnavi Kommaraju>, <Author: James Clear>]>
+    >>> Author.objects.all()[0].address
+    >>> addr1=Address(street="Street 1",postal_code="53004",city="Goa")
+    >>> addr2=Address(street="Street 2", postal_code="53002",city="Pune")
+    >>> addr1.save()
+    >>> addr2.save()
+        ###Adding address to J.K.Rowling
+    >>> jkr=Author.objects.get(first_name="J.K.")
+    >>> jkr.address
+    >>> jkr.address=addr1
+    >>> jkr.save()
+        ###Querying address of J.K.Rowling using Address class and Author class
+    >>> jkr.address       
+    <Address: Address object (1)>
+    >>> jkr.address.street
+    'Street 1'
+    >>> Address.objects.all()
+    <QuerySet [<Address: Address object (1)>, <Address: Address object (2)>]>
+    >>> Address.objects.all()[0].author
+    <Author: J.K. Rowling>
+    >>> Address.objects.all()[0].author.first_name
+    'J.K.'
+
+########----META CLASS IN MODELS----######
+    Model Meta is basically the inner class of our model class.
+    Model Meta is basically used to change the behavior of your model fields 
+        like changing order options,verbose_name and lot of other options.
+    It’s completely optional to add Meta class in your model.
+
+######-----Many_to_Many----######
+>>> from book_outlet.models import Country, Book
+>>> Book.objects.all()
+<QuerySet [<Book: Harry Potter 1(5)>, <Book: My Story(4)>, <Book: Atomic Habits(5)>]>
+>>> hp1=Book.objects.all()[0]
+>>> hp1.published_countries
+<django.db.models.fields.related_descriptors.create_forward_many_to_many_manager.<locals>.ManyRelatedManager object at 0x000001E26E5FB130>
+>>> hp1.published_countries.all()
+<QuerySet []>
+>>> germany=Country(name="Germany",code="01")
+>>> Book.objects.all()
+<QuerySet [<Book: Harry Potter 1(5)>, <Book: My Story(4)>, <Book: Atomic Habits(5)>]>
+
+>>> mystory=Book.objects.all()[1]
+>>> mystory.published_countries.add(germany)  ##add() -> only for many-to-many 
+raise ValueError(
+    ValueError: Cannot add "<Country: Country object (None)>": instance is on database "default", value is on database "None")
+here, we got becoz we didn't save the germany after assigning value to it
+so, after saving the value of germany, we can query the database
+>>> germany.save()
+>>> mystory.published_countries.add(germany)
+>>> mystory.published_countries.all()       
+<QuerySet [<Country: Country object (1)>]>
+>>> mystory.published_countries.filter(code="01")
+<QuerySet [<Country: Country object (1)>]>
+>>> mystory.published_countries.filter(code="50") 
+<QuerySet []>
+    ##querying Country model
+>>> Country.objects.all()
+<QuerySet [<Country: Country object (1)>]>
+>>> ger=Country.objects.all()[0]
+
+    ##using related_name,
+>>> from book_outlet.models import Book,Country 
+>>> ger=Country.objects.get(name="Germany")
+>>> ger.books.all()
+<QuerySet [<Book: My Story(4)>]>
